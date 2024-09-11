@@ -1,0 +1,11 @@
+[package]
+name = "taiko-language"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+byteorder = "1.5.0"
+regex = "1.10.6"
+clap = { version = "4.5.17", features = ["derive"] }
+pest = "2.7.12"
+pest_derive = "2.7.12"
