@@ -1,5 +1,5 @@
-use std::io::Read;
-use byteorder::ReadBytesExt;
+use std::io::{Read, Write};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::class_file::class_file_error::ClassFileError;
 
 
@@ -21,73 +21,73 @@ enum ConstantPoolTag {
     ConstantInvokeDynamic = 18,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ClassInfo {
     name_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct FieldrefInfo {
     class_index: u16,
     name_and_type_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct MethodrefInfo {
     class_index: u16,
     name_and_type_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct InterfaceMethodrefInfo {
     class_index: u16,
     name_and_type_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct StringInfo {
     string_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct IntegerInfo {
     value: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct FloatInfo {
     value: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct NameAndTypeInfo {
     name_index: u16,
     descriptor_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Utf8Info {
     str: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct MethodHandleInfo {
     reference_kind: u8,
     reference_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct MethodTypeInfo {
     descriptor_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct InvokeDynamicInfo {
     bootstrap_method_attr_index: u16,
     name_and_type_index: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CpInfo {
     ClassInfo(ClassInfo),
     FieldrefInfo(FieldrefInfo),
@@ -184,5 +184,67 @@ impl CpInfo {
                 Err(ClassFileError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("invalid constant pool tag {}", tag.to_string()))))
             }
         }
+    }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        match self {
+            CpInfo::ClassInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantClass as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_index)?;
+            },
+            CpInfo::FieldrefInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantFieldref as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.class_index)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_and_type_index)?;
+            },
+            CpInfo::MethodrefInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantMethodref as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.class_index)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_and_type_index)?;
+            },
+            CpInfo::InterfaceMethodrefInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantInterfaceMethodref as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.class_index)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_and_type_index)?;
+            },
+            CpInfo::StringInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantString as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.string_index)?;
+            },
+            CpInfo::IntegerInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantInteger as u8)?;
+                writer.write_u32::<byteorder::BigEndian>(info.value)?;
+            },
+            CpInfo::FloatInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantFloat as u8)?;
+                writer.write_u32::<byteorder::BigEndian>(info.value)?;
+            },
+            CpInfo::NameAndTypeInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantNameAndType as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_index)?;
+                writer.write_u16::<byteorder::BigEndian>(info.descriptor_index)?;
+            },
+            CpInfo::Utf8Info(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantUtf8 as u8)?;
+                let bytes = info.str.as_bytes();
+                writer.write_u16::<byteorder::BigEndian>(bytes.len() as u16)?;
+                writer.write_all(bytes)?;
+            },
+            CpInfo::MethodHandleInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantMethodHandle as u8)?;
+                writer.write_u8(info.reference_kind)?;
+                writer.write_u16::<byteorder::BigEndian>(info.reference_index)?;
+            },
+            CpInfo::MethodTypeInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantMethodType as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.descriptor_index)?;
+            },
+            CpInfo::InvokeDynamicInfo(info) => {
+                writer.write_u8(ConstantPoolTag::ConstantInvokeDynamic as u8)?;
+                writer.write_u16::<byteorder::BigEndian>(info.bootstrap_method_attr_index)?;
+                writer.write_u16::<byteorder::BigEndian>(info.name_and_type_index)?;
+            },
+        }
+        Ok(())
     }
 }

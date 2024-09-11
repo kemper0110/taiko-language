@@ -1,12 +1,12 @@
-use std::io::Read;
-use byteorder::ReadBytesExt;
+use std::io::{Read, Write};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::class_file::attribute_info::AttributeInfo;
 use crate::class_file::constant_pool::CpInfo;
 use crate::class_file::class_file_error::ClassFileError;
 use crate::class_file::field_info::FieldInfo;
 use crate::class_file::method_info::MethodInfo;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ClassFile {
     magic: u32,
     minor_version: u16,
@@ -66,5 +66,35 @@ impl ClassFile {
             methods,
             attributes,
         })
+    }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        writer.write_u32::<byteorder::BigEndian>(self.magic)?;
+        writer.write_u16::<byteorder::BigEndian>(self.minor_version)?;
+        writer.write_u16::<byteorder::BigEndian>(self.major_version)?;
+        writer.write_u16::<byteorder::BigEndian>((self.constant_pool.len() + 1) as u16)?;
+        for constant_pool in &self.constant_pool {
+            constant_pool.write(writer)?;
+        }
+        writer.write_u16::<byteorder::BigEndian>(self.access_flags)?;
+        writer.write_u16::<byteorder::BigEndian>(self.this_class)?;
+        writer.write_u16::<byteorder::BigEndian>(self.super_class)?;
+        writer.write_u16::<byteorder::BigEndian>(self.interfaces.len() as u16)?;
+        for interface in &self.interfaces {
+            writer.write_u16::<byteorder::BigEndian>(*interface)?;
+        }
+        writer.write_u16::<byteorder::BigEndian>(self.fields.len() as u16)?;
+        for field in &self.fields {
+            field.write(writer)?;
+        }
+        writer.write_u16::<byteorder::BigEndian>(self.methods.len() as u16)?;
+        for method in &self.methods {
+            method.write(writer)?;
+        }
+        writer.write_u16::<byteorder::BigEndian>(self.attributes.len() as u16)?;
+        for attribute in &self.attributes {
+            attribute.write(writer)?;
+        }
+        Ok(())
     }
 }

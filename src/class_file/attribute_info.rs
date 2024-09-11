@@ -1,8 +1,8 @@
-use std::io::Read;
-use byteorder::ReadBytesExt;
+use std::io::{Read, Write};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use crate::class_file::class_file_error::ClassFileError;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AttributeInfo {
     attribute_name_index: u16,
     info: Vec<u8>,
@@ -19,5 +19,11 @@ impl AttributeInfo {
             attribute_name_index,
             info,
         })
+    }
+    pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        writer.write_u16::<byteorder::BigEndian>(self.attribute_name_index)?;
+        writer.write_u32::<byteorder::BigEndian>(self.info.len() as u32)?;
+        writer.write_all(&self.info)?;
+        Ok(())
     }
 }
